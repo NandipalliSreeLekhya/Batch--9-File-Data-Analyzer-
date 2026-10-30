@@ -1,0 +1,494 @@
+# ==========================================
+# 1. IMPORT LIBRARIES
+# ==========================================
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import glob
+import os
+import re
+from collections import Counter
+from IPython.display import display
+
+print("Libraries imported successfully!")
+
+
+# ==========================================
+# 2. UPLOAD DATASET
+# ==========================================
+
+from google.colab import files
+
+uploaded = files.upload()
+
+print("\nFiles uploaded successfully!")
+
+
+# ==========================================
+# 3. SELECT AND READ CSV FILE
+# ==========================================
+
+csv_files = glob.glob("*.csv")
+
+if not csv_files:
+    raise FileNotFoundError("No CSV file found. Please upload a CSV dataset.")
+
+print("\nAvailable CSV files:")
+
+for i, file in enumerate(csv_files):
+    print(i, file)
+
+csv_file = csv_files[0]
+
+df_csv = pd.read_csv(csv_file)
+
+print("\nSelected file:", csv_file)
+print("Dataset loaded successfully!")
+
+display(df_csv.head())
+
+
+# ==========================================
+# 4. DATASET INFORMATION
+# ==========================================
+
+print("\n========== DATASET INFORMATION ==========")
+
+print("Number of Records:", df_csv.shape[0])
+print("Number of Columns:", df_csv.shape[1])
+
+print("\nColumn Names:")
+print(df_csv.columns.tolist())
+
+print("\nDataset Information:")
+df_csv.info()
+
+print("\nMissing Values:")
+print(df_csv.isnull().sum())
+
+print("\nDuplicate Rows:", df_csv.duplicated().sum())
+
+
+# ==========================================
+# 5. CREATE JSON, EXCEL AND TXT FILES
+# ==========================================
+
+json_file = "student_dataset.json"
+excel_file = "student_dataset.xlsx"
+txt_file = "student_dataset.txt"
+
+df_csv.to_json(json_file, orient="records", indent=4)
+df_csv.to_excel(excel_file, index=False)
+
+with open(txt_file, "w", encoding="utf-8") as file:
+    file.write(df_csv.to_string(index=False))
+
+print("\nCSV, JSON, Excel and TXT files are ready.")
+
+
+# ==========================================
+# 6. DETECT ALL SUPPORTED FILES
+# ==========================================
+
+all_files = (
+    glob.glob("*.csv")
+    + glob.glob("*.json")
+    + glob.glob("*.xlsx")
+    + glob.glob("*.txt")
+)
+
+print("\n========== FILE DETECTION ==========")
+
+for file in all_files:
+    extension = os.path.splitext(file)[1].lower()
+    print(file, "->", extension)
+
+
+# ==========================================
+# 7. AUTOMATIC FILE READING
+# ==========================================
+
+print("\n========== AUTOMATIC FILE READING ==========")
+
+for file in all_files:
+
+    extension = os.path.splitext(file)[1].lower()
+
+    print("\nFile:", file)
+
+    if extension == ".csv":
+        data = pd.read_csv(file)
+        print("Format: CSV")
+        print("Shape:", data.shape)
+        display(data.head(3))
+
+    elif extension == ".json":
+        data = pd.read_json(file)
+        print("Format: JSON")
+        print("Shape:", data.shape)
+        display(data.head(3))
+
+    elif extension == ".xlsx":
+        data = pd.read_excel(file)
+        print("Format: Excel")
+        print("Shape:", data.shape)
+        display(data.head(3))
+
+    elif extension == ".txt":
+        with open(file, "r", encoding="utf-8") as f:
+            text_data = f.read()
+
+        print("Format: TXT")
+        print("Characters:", len(text_data))
+
+
+# ==========================================
+# 8. DATA FILTERING
+# ==========================================
+
+print("\n========== DATA FILTERING ==========")
+
+if "Attendance_Percentage" in df_csv.columns:
+
+    attendance_filter = df_csv[
+        df_csv["Attendance_Percentage"] > 75
+    ]
+
+    print("\nStudents with attendance above 75%:")
+    display(attendance_filter.head(10))
+    print("Total matching students:", len(attendance_filter))
+
+
+if "Average_Marks" in df_csv.columns:
+
+    marks_filter = df_csv[
+        df_csv["Average_Marks"] > 70
+    ]
+
+    print("\nStudents with average marks above 70:")
+    display(marks_filter.head(10))
+    print("Total matching students:", len(marks_filter))
+
+
+if "Department" in df_csv.columns:
+
+    cse_students = df_csv[
+        df_csv["Department"].astype(str).str.strip().str.upper() == "CSE"
+    ]
+
+    print("\nCSE Department Students:")
+    display(cse_students.head(10))
+    print("Total CSE students:", len(cse_students))
+
+
+# ==========================================
+# 9. STATISTICAL ANALYSIS
+# ==========================================
+
+print("\n========== STATISTICAL ANALYSIS ==========")
+
+numeric_columns = [
+    column for column in [
+        "Average_Marks",
+        "Attendance_Percentage"
+    ]
+    if column in df_csv.columns
+]
+
+if numeric_columns:
+
+    for column in numeric_columns:
+
+        values = pd.to_numeric(
+            df_csv[column],
+            errors="coerce"
+        ).dropna()
+
+        print(f"\nStatistics for {column}:")
+
+        if values.empty:
+            print("No valid numerical values.")
+            continue
+
+        print("Mean:", values.mean())
+        print("Median:", values.median())
+        print("Minimum:", values.min())
+        print("Maximum:", values.max())
+        print("Variance:", values.var())
+        print("Standard Deviation:", values.std())
+
+else:
+    print("No supported numerical columns found.")
+
+
+# ==========================================
+# 10. SUBJECT-WISE AVERAGE MARKS
+# ==========================================
+
+print("\n========== SUBJECT-WISE AVERAGES ==========")
+
+subjects = [
+    "Python_Marks",
+    "Data_Structures_Marks",
+    "DBMS_Marks",
+    "Computer_Networks_Marks",
+    "Mathematics_Marks"
+]
+
+available_subjects = [
+    column for column in subjects
+    if column in df_csv.columns
+]
+
+if available_subjects:
+
+    for subject in available_subjects:
+
+        subject_marks = pd.to_numeric(
+            df_csv[subject],
+            errors="coerce"
+        )
+
+        print(
+            subject,
+            "Average:",
+            round(subject_marks.mean(), 2)
+        )
+
+else:
+    print("Subject mark columns not found.")
+
+
+# ==========================================
+# 11. TXT WORD COUNT AND FREQUENCY
+# ==========================================
+
+print("\n========== TXT WORD ANALYSIS ==========")
+
+with open(txt_file, "r", encoding="utf-8") as file:
+    text_data = file.read()
+
+words = re.findall(r"\b\w+\b", text_data.lower())
+
+print("Total Word Count:", len(words))
+
+word_frequency = Counter(words)
+
+print("\nTop 20 Most Frequent Words:")
+
+for word, count in word_frequency.most_common(20):
+    print(word, ":", count)
+
+
+# ==========================================
+# 12. BAR CHART: DEPARTMENT-WISE AVERAGE
+# ==========================================
+
+print("\n========== DEPARTMENT-WISE AVERAGE MARKS ==========")
+
+if (
+    "Department" in df_csv.columns
+    and "Average_Marks" in df_csv.columns
+):
+
+    chart_data = df_csv.copy()
+
+    chart_data["Average_Marks"] = pd.to_numeric(
+        chart_data["Average_Marks"],
+        errors="coerce"
+    )
+
+    department_avg = (
+        chart_data.groupby("Department")["Average_Marks"]
+        .mean()
+        .dropna()
+    )
+
+    if not department_avg.empty:
+
+        department_avg.plot(kind="bar", figsize=(8, 5))
+
+        plt.title("Average Marks by Department")
+        plt.xlabel("Department")
+        plt.ylabel("Average Marks")
+        plt.tight_layout()
+        plt.show()
+
+    else:
+        print("No valid marks data available.")
+
+else:
+    print("Required columns not found.")
+
+
+# ==========================================
+# 13. PIE CHART: PASS VS FAIL
+# ==========================================
+
+print("\n========== PASS VS FAIL ==========")
+
+if "Pass_Status" in df_csv.columns:
+
+    pass_count = df_csv["Pass_Status"].dropna().value_counts()
+
+    if not pass_count.empty:
+
+        pass_count.plot(
+            kind="pie",
+            autopct="%1.1f%%",
+            figsize=(6, 6)
+        )
+
+        plt.title("Pass vs Fail Distribution")
+        plt.ylabel("")
+        plt.tight_layout()
+        plt.show()
+
+    else:
+        print("No pass/fail data available.")
+
+else:
+    print("Pass_Status column not found.")
+
+
+# ==========================================
+# 14. HISTOGRAM: DISTRIBUTION OF MARKS
+# ==========================================
+
+print("\n========== DISTRIBUTION OF AVERAGE MARKS ==========")
+
+if "Average_Marks" in df_csv.columns:
+
+    marks = pd.to_numeric(
+        df_csv["Average_Marks"],
+        errors="coerce"
+    ).dropna()
+
+    if not marks.empty:
+
+        plt.figure(figsize=(8, 5))
+
+        plt.hist(marks, bins=10)
+
+        plt.title("Distribution of Average Marks")
+        plt.xlabel("Average Marks")
+        plt.ylabel("Number of Students")
+
+        plt.tight_layout()
+        plt.show()
+
+    else:
+        print("No valid average marks available.")
+
+else:
+    print("Average_Marks column not found.")
+
+
+# ==========================================
+# 15. SCATTER PLOT: ATTENDANCE VS MARKS
+# ==========================================
+
+print("\n========== ATTENDANCE VS AVERAGE MARKS ==========")
+
+if (
+    "Attendance_Percentage" in df_csv.columns
+    and "Average_Marks" in df_csv.columns
+):
+
+    scatter_data = df_csv[
+        ["Attendance_Percentage", "Average_Marks"]
+    ].copy()
+
+    scatter_data["Attendance_Percentage"] = pd.to_numeric(
+        scatter_data["Attendance_Percentage"],
+        errors="coerce"
+    )
+
+    scatter_data["Average_Marks"] = pd.to_numeric(
+        scatter_data["Average_Marks"],
+        errors="coerce"
+    )
+
+    scatter_data = scatter_data.dropna()
+
+    if not scatter_data.empty:
+
+        plt.figure(figsize=(8, 5))
+
+        plt.scatter(
+            scatter_data["Attendance_Percentage"],
+            scatter_data["Average_Marks"]
+        )
+
+        plt.title("Attendance vs Average Marks")
+        plt.xlabel("Attendance Percentage")
+        plt.ylabel("Average Marks")
+
+        plt.tight_layout()
+        plt.show()
+
+    else:
+        print("No valid attendance and marks data available.")
+
+else:
+    print("Required columns not found.")
+
+
+# ==========================================
+# 16. BATCH PROCESSING
+# ==========================================
+
+print("\n========== BATCH PROCESSING ==========")
+
+for file in all_files:
+
+    extension = os.path.splitext(file)[1].lower()
+
+    print("\nProcessing:", file)
+
+    try:
+
+        if extension == ".csv":
+            data = pd.read_csv(file)
+            print("CSV processed successfully.")
+
+        elif extension == ".json":
+            data = pd.read_json(file)
+            print("JSON processed successfully.")
+
+        elif extension == ".xlsx":
+            data = pd.read_excel(file)
+            print("Excel processed successfully.")
+
+        elif extension == ".txt":
+            with open(file, "r", encoding="utf-8") as f:
+                content = f.read()
+
+            print("TXT processed successfully.")
+            print("Word Count:", len(
+                re.findall(r"\b\w+\b", content)
+            ))
+
+            continue
+
+        print("Number of Records:", data.shape[0])
+        print("Number of Columns:", data.shape[1])
+
+    except Exception as error:
+        print("Could not process file:", error)
+
+
+# ==========================================
+# 17. FINAL SUMMARY
+# ==========================================
+
+print("\n========== FINAL SUMMARY ==========")
+
+print("Project: File Data Analyzer System")
+print("Main Dataset:", csv_file)
+print("Total Records:", df_csv.shape[0])
+print("Total Columns:", df_csv.shape[1])
+print("Supported Files Detected:", len(all_files))
+
+print("\nAll analysis steps completed!")
